@@ -1,0 +1,16 @@
+Keyboard Shortcuts
+
+Data on key codes can be found at keycode.info
+
+Hit the following keys three times and get a pop up with the corresponding message.
+
+1 Device - SCANNING
+2 Device Scan - PASS
+3 Device Scan - FAIL
+4 Device - BREACHING
+5 Device Breach - PASS
+6 Device Breach - FAIL
+7 Memory - UPLOAD
+8 Memory - DOWNLOAD
+9 Force Pair - FAIL
+0 Force Pair - PASS

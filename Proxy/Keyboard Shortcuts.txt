@@ -1,0 +1,16 @@
+Keyboard Shortcuts
+
+Data on key codes can be found at keycode.info
+
+Hit the following keys three times and get a pop up with the corresponding message.
+
+1 Proxy Network Enabled
+2 Proxy network Disabled 
+3 Node 1 - U.S - Enabled
+4 Node 2 - Prague - Enabled
+5 Node 3 - North Korea - Enabled
+6 Node 4 - Moscow - Enabled
+7 Node 5 - Mexico - Enabled
+8 Node 6- Paris - Enabled
+9 Proxy Link Generated
+0 Proxy Link Activated

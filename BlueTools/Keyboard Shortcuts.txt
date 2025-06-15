@@ -1,0 +1,16 @@
+Keyboard Shortcuts
+
+Data on key codes can be found at keycode.info
+
+Hit the following keys three times and get a pop up with the corresponding message.
+
+1 DEVICE - Scan
+2 SCAN - Success
+3 WARNING - Error
+4 DEVICE - Located
+5 DEVICE - Upload
+6 DEVICE - Download
+7 DEVICE - Force Pair
+8 DEVICE - Breach
+9 DEVICE - Root
+0 SCAN - Fail 

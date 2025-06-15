@@ -1,0 +1,16 @@
+Keyboard Shortcuts
+
+Data on key codes can be found at keycode.info
+
+Hit the following keys three times and get a pop up with the corresponding message.
+
+1 FIREWALKER - Enabled
+2 FIREWALKER - Error
+3 PROBE - Running
+4 PROBE - Fail
+5 FIREWALL - File Found
+6 FIREWALKER - Download
+7 FIREWALKER - Upload
+8 FIREWALL - Running
+9 FIREWALL - Disabled
+0 FIREWALL - Bypassed

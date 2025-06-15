@@ -1,0 +1,16 @@
+Keyboard Shortcuts
+
+Data on key codes can be found at keycode.info
+
+Hit the following keys three times and get a pop up with the corresponding message.
+
+1 PROBE RUNNING
+2 PROBE FAIL
+3 PROBE ERROR
+4 PROBE PASS
+5 ANTIVIRUS? PRESENT
+6 ANTIVIRUS? NOT PRESENT
+7 FIREWALL? PRESENT
+8 FIREWALL? NOT PRESENT
+9 PASSWORD? PRESENT
+0 PASSWORD? NOT PRESENT

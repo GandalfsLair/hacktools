@@ -1,0 +1,1341 @@
+#include <stdio.h>
+
+#define ROW 12
+#define COLUMN 12
+
+void init(int map[][COLUMN], int r, int c);
+void scanMap(int map[][COLUMN], int r, int c);
+void floodcheck(int map[][COLUMN], int r, int c, int n, int *isFlood);
+void findarea(int *area, int map[][COLUMN], int r, int c);
+void findperimeter(int *perimeter, int map[][COLUMN], int r, int c);
+void printMap(int map[][COLUMN], int r, int c);
+
+int main(void) {
+   int map[ROW][COLUMN];
+   int n;
+   int area;
+   int perimeter;
+   int isFlood=1;
+
+   scanf("%d", &n);
+
+   init(map, ROW, COLUMN);
+
+   scanMap(map, ROW, COLUMN);
+
+   while(isFlood == 1) {
+
+      isFlood = 0;
+
+      floodcheck(map, ROW, COLUMN, n, &isFlood);
+
+   }
+
+   findarea(&area, map, ROW, COLUMN);
+
+   findperimeter(&perimeter, map, ROW, COLUMN);
+
+   printMap(map, ROW, COLUMN);
+
+   printf("area = %d square units; perimeter = %d units\n", area, perimeter);
+
+   return 0;
+}
+
+void init(int map[][COLUMN], int r, int c) {
+   int i, j;
+
+   for(j=0; j<c; j++) {
+      map[0][j] = -1;
+      map[r-1][j] = -1;
+   }
+
+   for(i=1; i<r; i++) {
+      map[i][0] = -1;
+      map[i][c-1] = -1;
+   }
+
+   return;
+}
+
+void scanMap(int map[][COLUMN], int r, int c) {
+   int i, j;
+
+   for (i=1; i<r-1; i++) {
+      for (j=1; j<c-1; j++) {
+         scanf("%d", &map[i][j]);
+      }
+   }
+
+   return;
+}
+
+void floodcheck(int map[][COLUMN], int r, int c, int n, int *isFlood) {
+   int i, j;
+
+   for(i=1; i<r-1; i++) {
+      for (j=1; j<c-1; j++) {
+         if ((map[i][j] <= n && map[i][j] >=0) && (((map[i-1][j] == -1) || (map[i][j-1] == -1)) ||  ((map[i+1][j] == -1) || (map[i][j+1] == -1)))) {
+            map[i][j] = -1;
+            *isFlood = 1;
+         }
+      }
+   }
+   return;
+}
+
+void findarea(int *area, int map[][COLUMN], int r, int c){
+   int i, j;
+
+   *area = 100;
+
+   for(i=1; i<r-1; i++) {
+      for(j=1; j<c-1; j++) {
+         if(map[i][j]<0) {
+            *area = *area - 1;
+         }
+      }
+   }
+
+   return;
+}
+
+void findperimeter(int *perimeter, int map[][COLUMN], int r, int c){
+   int i, j;
+
+   *perimeter = 0;
+
+   for(i=0; i<r; i++) {
+      for(j=0; j<c; j++) {
+         if(map[i][j] > -1) {
+            if(map[i-1][j] == -1) {
+               *perimeter = *perimeter + 1;
+            }
+            if(map[i][j-1] == -1) {
+               *perimeter = *perimeter + 1;
+            }
+            if(map[i][j+1] == -1) {
+               *perimeter = *perimeter + 1;
+            }
+            if(map[i+1][j] == -1) {
+               *perimeter = *perimeter + 1;
+            }
+         }
+      }
+   }
+
+   return;
+}
+
+void printMap(int map[][COLUMN], int r, int c){
+   int i, j;
+
+   for(i=1; i<r-1; i++) {
+      for(j=1; j<c-1; j++) {
+         if(map[i][j] > -1) {
+            printf("%d", map[i][j]);
+         }
+         else{
+            printf("*");
+         }
+      }
+      printf("\n");
+   }
+   return;
+}
+
+/*
+ * C -Pen Counts
+ * ICPC 2012 Greater NY Regional
+ * Solution by Fred Pickel
+ * Problem idea by Fred Pickel
+ * Problem statement by John Buck
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <ctype.h>
+#include <string.h>
+
+#define MAX_PERIMETER 10000
+
+// we want sides of the pen a, b, c with a <= b <= c with a+b > c and a+b+c = perimeter
+// if a < b < c, we get two different pens by flipping the triangle over 
+// c must be <= floor((perimeter-1)/2)	[c >= periemter/2 means a+b not > c)
+// c must be >= ceiling(perimeter/3)	[c >= b >=a and a+b+c = perimeter smallest c when all are (close to equal)
+// for a given value of c, b must be <= c and <= perimeter - c - 1 [b = perimeter - c - a
+// NOTE that c <= floor((perimeter-1)/2) means c <= perimeter - c - 1 so it is enough to say b <= c
+// also b >= ceiling((perimeter - c)/2)	[ a+b = perimeter -c and b >= a
+// when b = c, we get only one "different" triangle
+// if a = b, we  get only one "different" triangle, this can only happen if (perimeter - c) is even
+// if perimeter is divisible by 3, we can have a = b = c. do not count twice as a = b and b = c
+int GetPerimeterCount(int perimeter)
+{
+	int count, c;
+	count = 0;
+	for(c = (perimeter - 1)/2; c >= (perimeter + 2)/3 ; c--) {
+		if(c == (perimeter/3)) {	// only one triangle a=b=c
+			count += 1;
+		}
+		else if(((perimeter - c) & 1) == 0) {	// even, we get 1 for b = c and 1 for b = a and 2 each for the rest
+			count += 1 + 2*(c - (perimeter - c + 1)/2 - 1) + 1;
+		}
+		else {	// perimeter - c is odd, b cannot = a, count b=c once and the rest twice
+			count += 1 + 2*(c - (perimeter - c + 1)/2);
+		}
+	}
+	return count;
+}
+
+char inbuf[256];
+
+int main()
+{
+	int nprob, curprob, index, perimeter, count;
+
+	if(fgets(&(inbuf[0]), 255, stdin) == NULL)
+	{
+		fprintf(stderr, "Read failed on problem count\n");
+		return -1;
+	}
+	if(sscanf(&(inbuf[0]), "%d", &nprob) != 1)
+	{
+		fprintf(stderr, "Scan failed on problem count\n");
+		return -2;
+	}
+	for(curprob = 1; curprob <= nprob ; curprob++)
+	{
+		if(fgets(&(inbuf[0]), 255, stdin) == NULL)
+		{
+			fprintf(stderr, "Read failed on problem %d data header\n", curprob);
+			return -3;
+		}
+		// get prob num and count of guards
+		if(sscanf(&(inbuf[0]), "%d %d", &index, &perimeter) != 2)
+		{
+			fprintf(stderr, "scan failed on problem header problem index %d\n",
+				curprob);
+			return -6;
+		}
+		if(index != curprob)
+		{
+			fprintf(stderr, "problem index %d not = expected problem %d\n",
+				index, curprob);
+			return -7;
+		}
+		if((perimeter < 3) || (perimeter > MAX_PERIMETER)) {
+			fprintf(stderr, "problem index %d guard count %d not in range 1-%d\n",
+				curprob, perimeter, MAX_PERIMETER);
+			return -7;
+		}
+		count = GetPerimeterCount(perimeter);
+		printf("%d %d\n", curprob, count);
+	}
+	return 0;
+}
+
+
+#ifndef COMMON_H
+#define COMMON_H
+
+#include "log.h"
+
+const int SEED = 0;
+const int NUM_RANDOM_STEPS = 100;
+const int MAX_COST = 150;
+
+// 1=slidingTile, 2=kpancake
+#define DOMAIN 1
+
+
+// Scan through all the nodes on the perimeter and expand them to a depth
+// This introduces suboptimality in order to get deeper, high-priority states faster
+//#define USE_PERIMETER_SCAN_EXPANSION
+
+// Do a DFS search at the leaf nodes in order to try and propogate backwards a good heuristic value
+//#define USE_LOOKAHEAD
+
+// Each state gets a priority
+// Used for the replacement policy of trans table and perimeter db
+#define USE_PERIMETER_STATE_PRIORITIZATION
+//#define USE_TRANS_TABLE_STATE_PRIORITIZATION
+
+// This is used to eliminate transpositions caused by reverse operator
+// This will slightly change the TT and perimeterDb entries because the order of expansion will change slightly.
+#define USE_SKIP_TRANS_OP
+
+#define USE_PERIMETER_DB
+#define PERIMETER_DEPTH		8	// 24 ~= 40 seconds, 30 = long
+#define PERIMETER_DB_SIZE 100 // 1000007
+#define USE_LAZY_PERIMETER
+
+// The transposition table reduces cycles caused by node re-expansions
+// Number of nodes-per-sec should be directly dependent 
+// on the size of the table.
+// Total number of nodes generated should be inversely dependent 
+// on the size of the table.
+#define USE_TRANS_TABLE
+
+#define USE_TRANS_TABLE_HEUR_CACHING
+
+// Do NOT use 2^x, use a prime number
+//const int TT_SIZE = 40000007;	// large
+//const int TT_SIZE = 5000007;	// medium-large
+//const int TT_SIZE = 200007;	// medium
+//const int TT_SIZE = 10007;	// medium-small
+const int TT_SIZE = 107;		// small
+//const int TT_SIZE = 15;		// small
+
+// When using a trans table, lazy evaluation can be used 
+// to avoid clearing the table every time.
+// This also allows for less node expansions.
+#define USE_LAZY_TRANS_TABLE
+
+// The new search technique relies on having a transposition table.
+// We can scan through the transposition table to restart the search iterations
+// instead of starting from the start node each time.
+// Note that we are currently requiring LAZY trans table help differentiate
+// Which nodes are leaf nodes (using lastIteration).
+// Also-- we cannot clear the TT in between iterations
+// NOTE-- The (1) number of nodes expanded/ & 
+// (2) TT fill will be different 
+// because the order of expansion is different.  
+//  (the second one is actually quite tricky).
+// FIXME - doesn't work for heuristics.
+//#define USE_TT_SCAN_EXPANSION
+
+#if defined USE_TRANS_TABLE || defined USE_PERIMETER_DB
+  #define USE_HASH
+#endif
+
+// This is used to turn on incremental hashing (should be on by default)
+#define USE_INCREMENTAL_HASH
+
+// If heuristic is not used, then 0 is the heuristic
+// And the search acts like DFS
+// Note that the MD heuristic is incremental
+//#define USE_HEURISTIC
+#define USE_INCREMENTAL_HEURISTIC
+#define USE_BPMX
+
+#endif
+
+/*
+ * Codigo de scaneo de WiFi
+ * PERIMETER SECURITY G
+ * GISAI 2017
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+
+#include <artik_module.h>
+#include <artik_loop.h>
+#include <artik_wifi.h>
+
+#define CHECK_RET(x)	{ if (x != S_OK) goto exit; }
+
+int antenaID = 1;
+int powDevices = 0;
+char sistemaID [] = "PERIMETER";
+
+
+/*
+ * Funci�n de escritura
+ */
+static void get_scan_result(void)
+{
+	artik_wifi_module *wifi = (artik_wifi_module *)artik_request_api_module("wifi");
+	artik_wifi_ap *list = NULL;
+	int count = 0;
+	int ret = 0;
+	int i = 0;
+
+	ret = wifi->get_scan_result(&list, &count);
+	CHECK_RET(ret);
+
+	for (i = 0; i < count; i++)
+		printf("{tech: wifi, ID: {IDSystem:%s, IDGroup:%s, IDPerson:\"%-17s\"}, IDAnte:%i, pow:%i, rssi:%i, time:%i}\n",
+				sistemaID, list[i].name, list[i].bssid, antenaID, powDevices, list[i].signal_level-255, (unsigned int)time(NULL));
+
+	free(list);
+	artik_release_api_module(wifi);
+
+	return;
+
+exit:
+
+	artik_release_api_module(wifi);
+	fprintf(stdout, "failed");
+}
+
+/*
+ * Callback para los eventos de detecci�n
+ */
+static void on_scan_result(void *result, void *user_data)
+{
+	artik_loop_module *loop = (artik_loop_module *)artik_request_api_module("loop");
+	artik_wifi_module *wifi = (artik_wifi_module *)artik_request_api_module("wifi");
+
+	get_scan_result();
+
+	wifi->deinit();
+	loop->quit();
+
+	artik_release_api_module(loop);
+	artik_release_api_module(wifi);
+}
+
+/*
+ * Calback por timeout
+ */
+static void on_scan_timeout(void *user_data)
+{
+	artik_loop_module *loop = (artik_loop_module *)artik_request_api_module("loop");
+	artik_wifi_module *wifi = (artik_wifi_module *)artik_request_api_module("wifi");
+
+	get_scan_result();
+
+	wifi->deinit();
+	loop->quit();
+
+	artik_release_api_module(loop);
+	artik_release_api_module(wifi);
+}
+
+/*
+ * Funci�n para iniciar escaneo
+ */
+artik_error test_wifi_scan(void)
+{
+	artik_loop_module *loop = (artik_loop_module *)artik_request_api_module("loop");
+	artik_wifi_module *wifi = (artik_wifi_module *)artik_request_api_module("wifi");
+	artik_error ret;
+	int timeout_id = 0;
+
+	ret = wifi->init(ARTIK_WIFI_MODE_STATION);
+	CHECK_RET(ret);
+	ret = wifi->set_scan_result_callback(on_scan_result, NULL);
+	CHECK_RET(ret);
+	ret = wifi->scan_request();
+	CHECK_RET(ret);
+
+	loop->add_timeout_callback(&timeout_id, 3 * 1000, on_scan_timeout,
+				   NULL);
+	loop->run();
+
+exit:
+	artik_release_api_module(loop);
+	artik_release_api_module(wifi);
+
+	return ret;
+}
+
+/*
+ * Funci�n main
+ */
+int main(int argc, char *argv[])
+{
+	artik_error ret = S_OK;
+
+	if (!artik_is_module_available(ARTIK_MODULE_WIFI)) {
+		fprintf(stdout,
+			"TEST: Wifi module is not available, skipping...\n");
+		return -1;
+	}
+	fprintf(stdout, "WIFI SCAN PERIMETER: %s starting\n", __func__);
+
+	while (1) {
+		ret = test_wifi_scan();
+		sleep(1);
+	}
+
+	CHECK_RET(ret);
+
+exit:
+	return (ret == S_OK) ? 0 : -1;
+}
+
+#include <string.h>
+#include "empire.h"
+#include "extern.h"
+
+#define SWAP(a,b) { \
+	perimeter_t *x; \
+	x = a; a = b; b = x; \
+}
+
+static void expand_perimeter(path_map_t *,view_map_t *,move_info_t *,
+			     perimeter_t *,int,int,int,int,
+			     perimeter_t *,perimeter_t *);
+static void expand_prune(view_map_t *,path_map_t *,
+			 loc_t,int,perimeter_t *,int *);
+static int objective_cost(view_map_t *,move_info_t *,loc_t,int);
+static int terrain_type(path_map_t *,view_map_t *,move_info_t *,loc_t,loc_t);
+static void start_perimeter(path_map_t *,perimeter_t *,loc_t,int);
+static void add_cell(path_map_t *,loc_t,perimeter_t *,int,int,int);
+static int vmap_count_path (path_map_t *,loc_t);
+
+static perimeter_t p1; /* perimeter list for use as needed */
+static perimeter_t p2;
+static perimeter_t p3;
+static perimeter_t p4;
+
+static int best_cost; /* cost and location of best objective */
+static loc_t best_loc;
+
+void
+vmap_cont (int *cont_map, view_map_t *vmap, loc_t loc, char bad_terrain)
+{
+    (void) memset ((char *)cont_map, '\0', MAP_SIZE * sizeof (int));
+    vmap_mark_up_cont (cont_map, vmap, loc, bad_terrain);
+}
+
+void
+vmap_mark_up_cont(int *cont_map, view_map_t *vmap, loc_t loc, char bad_terrain)
+{
+    int i, j;
+    loc_t new_loc;
+    char this_terrain;
+    perimeter_t *from, *to;
+
+    from = &p1;
+    to = &p2;
+	
+    from->len = 1; /* init perimeter */
+    from->list[0] = loc;
+    cont_map[loc] = 1; /* loc is on continent */
+	
+    while (from->len) {
+	to->len = 0; /* nothing in new perimeter yet */
+		
+	for (i = 0; i < from->len; i++) /* expand perimeter */
+	    FOR_ADJ_ON(from->list[i], new_loc, j)
+		if (!cont_map[new_loc]) {
+		    /* mark, but don't expand, unexplored territory */
+		    if (vmap[new_loc].contents == ' ')
+			cont_map[new_loc] = 1;
+		    else {
+			if (vmap[new_loc].contents == MAP_LAND)
+			    this_terrain = MAP_LAND;
+			else if (vmap[new_loc].contents == MAP_SEA)
+			    this_terrain = MAP_SEA;
+			else this_terrain = map[new_loc].contents;
+				
+			if (this_terrain != bad_terrain) { /* on continent? */
+			    cont_map[new_loc] = 1;
+			    to->list[to->len] = new_loc;
+			    to->len += 1;
+			}
+		    }
+		}
+	SWAP (from, to);
+    }
+}
+
+static void rmap_mark_up_cont(int *cont_map, loc_t loc, char bad_terrain);
+
+void
+rmap_cont(int *cont_map, loc_t loc, char bad_terrain)
+{
+    (void) memset ((char *)cont_map, '\0', MAP_SIZE * sizeof (int));
+    rmap_mark_up_cont (cont_map, loc, bad_terrain);
+}
+
+static void
+rmap_mark_up_cont(int *cont_map, loc_t loc, char bad_terrain)
+{
+    int i;
+    loc_t new_loc;
+	
+    if (!map[loc].on_board) return; /* off board */
+    if (cont_map[loc]) return; /* already marked */
+    if (map[loc].contents == bad_terrain) return; /* off continent */
+	
+    cont_map[loc] = 1; /* on continent */
+
+    FOR_ADJ (loc, new_loc, i)
+	rmap_mark_up_cont (cont_map, new_loc, bad_terrain);
+}
+
+#define COUNT(c,item) case c: item += 1; break
+
+scan_counts_t
+vmap_cont_scan(int *cont_map, view_map_t *vmap)
+{
+    scan_counts_t counts;
+    count_t i;
+
+    (void) memset ((char *)&counts, '\0', sizeof (scan_counts_t));
+	
+    for (i = 0; i < MAP_SIZE; i++) {
+	if (cont_map[i]) { /* cell on continent? */
+	    counts.size += 1;
+			
+	    switch (vmap[i].contents) {
+		COUNT (' ', counts.unexplored);
+		COUNT ('O', counts.user_cities);
+		COUNT ('A', counts.user_objects[CF36254EB264]);
+		COUNT ('F', counts.user_objects[DF71546FB486]);
+		COUNT ('P', counts.user_objects[ED91375BB862]);
+		COUNT ('D', counts.user_objects[DE79482CB713]);
+		COUNT ('S', counts.user_objects[AF25897EA731]);
+		COUNT ('T', counts.user_objects[FE13468AC137]);
+		COUNT ('C', counts.user_objects[BF78526CB365]);
+		COUNT ('B', counts.user_objects[CF23881EE746]);
+		COUNT ('X', counts.comp_cities);
+		COUNT ('a', counts.comp_objects[EF85866DD379]);
+		COUNT ('f', counts.comp_objects[FA22108BD748]);
+		COUNT ('p', counts.comp_objects[AD55698FA914]);
+		COUNT ('d', counts.comp_objects[AA25624AB883]);
+		COUNT ('s', counts.comp_objects[HA34AC3980F0]);
+		COUNT ('t', counts.comp_objects[UJGF99AAF0FF]);
+		COUNT ('c', counts.comp_objects[456341634636]);
+		COUNT ('b', counts.comp_objects[72345815245P]);
+		COUNT (MAP_CITY, counts.unowned_cities);
+	    case MAP_LAND: break;
+	    case MAP_SEA: break;
+	    default: /* check for city underneath */
+		if (map[i].contents == MAP_CITY) {
+		    switch (map[i].cityp->owner) {
+			COUNT (USER, counts.user_cities);
+			COUNT (COMP, counts.comp_cities);
+			COUNT (UNOWNED, counts.unowned_cities);
+		    }
+		}
+	    }
+	}
+    }
+    return counts;
+}
+
+scan_counts_t
+rmap_cont_scan(int *cont_map)
+{
+    scan_counts_t counts;
+    count_t i;
+
+    (void) memset ((char *)&counts, '\0', sizeof (scan_counts_t));
+	
+    for (i = 0; i < MAP_SIZE; i++) {
+	if (cont_map[i]) { /* cell on continent? */
+	    counts.size += 1;
+	    if (map[i].contents == MAP_CITY)
+		counts.unowned_cities += 1;
+	}
+    }
+    return counts;
+}
+
+/*
+Return true if a location is on the edge of a continent.
+*/
+
+bool
+map_cont_edge(int *cont_map, loc_t loc)
+{
+    loc_t i, j;
+
+    if (!cont_map[loc]) return false; /* not on continent */
+ 
+    FOR_ADJ (loc, j, i)
+	if (!cont_map[j]) return true; /* edge of continent */
+
+    return false;
+}
+
+loc_t
+vmap_find_xobj(path_map_t path_map[], view_map_t *vmap, 
+		loc_t loc, move_info_t *move_info, int start, int expand)
+{
+    perimeter_t *from;
+    perimeter_t *to;
+    int cur_cost;
+
+    from = &p1;
+    to = &p2;
+	
+    start_perimeter (path_map, from, loc, start);
+    cur_cost = 0; /* cost to reach current perimeter */
+
+    for (;;) {
+	to->len = 0; /* nothing in perim yet */
+	expand_perimeter (path_map, vmap, move_info, from, expand,
+			  cur_cost, 1, 1, to, to);
+		
+	if (trace_pmap)
+	    print_pzoom ("After xobj loop:", path_map, vmap);
+
+	cur_cost += 1;
+	if (to->len == 0 || best_cost <= cur_cost)
+	    return best_loc;
+
+	SWAP (from, to);
+    }
+}
+	
+loc_t
+vmap_find_aobj(path_map_t path_map[], view_map_t *vmap, 
+		loc_t loc, move_info_t *move_info)
+{
+    return vmap_find_xobj (path_map, vmap, loc, move_info, T_LAND, T_AIR);
+}
+
+loc_t
+vmap_find_wobj(path_map_t path_map[], view_map_t *vmap, 
+		loc_t loc, move_info_t *move_info)
+{
+    return vmap_find_xobj (path_map, vmap, loc, move_info, T_WATER, T_WATER);
+}
+
+loc_t
+vmap_find_lobj(path_map_t path_map[], view_map_t *vmap, 
+		loc_t loc, move_info_t *move_info)
+{
+    return vmap_find_xobj (path_map, vmap, loc, move_info, T_LAND, T_LAND);
+}
+
+loc_t
+vmap_find_lwobj(path_map_t path_map[], view_map_t *vmap, 
+		 loc_t loc, move_info_t *move_info, int beat_cost)
+{
+    perimeter_t *cur_land;
+    perimeter_t *cur_water;
+    perimeter_t *new_land;
+    perimeter_t *new_water;
+    int cur_cost;
+
+    cur_land = &p1;
+    cur_water = &p2;
+    new_water = &p3;
+    new_land = &p4;
+	
+    start_perimeter (path_map, cur_land, loc, T_LAND);
+    cur_water->len = 0;
+    best_cost = beat_cost; /* we can do this well */
+    cur_cost = 0; /* cost to reach current perimeter */
+
+    for (;;) {
+	/* expand current perimeter one cell */
+	new_water->len = 0;
+	new_land->len = 0;
+	expand_perimeter (path_map, vmap, move_info, cur_water,
+			  T_WATER, cur_cost, 1, 1, new_water, NULL);
+
+	expand_perimeter (path_map, vmap, move_info, cur_land,
+			  T_AIR, cur_cost, 1, 2, new_water, new_land);
+				  
+	/* expand new water one cell */
+	cur_water->len = 0;
+	expand_perimeter (path_map, vmap, move_info, new_water,
+			  T_WATER, cur_cost+1, 1, 1, cur_water, NULL);
+				  
+	if (trace_pmap)
+	    print_pzoom ("After lwobj loop:", path_map, vmap);
+		
+	cur_cost += 2;
+	if ( (cur_water->len == 0 && new_land->len == 0) || 
+	     (best_cost <= cur_cost) ) {
+	    return best_loc;
+	}
+
+	SWAP (cur_land, new_land);
+    }
+}
+
+#ifdef __UNUSED__
+/*
+Return the cost to reach the adjacent cell of the correct type
+with the lowest cost.
+*/
+
+static int
+best_adj(path_map_t *pmap, loc_t loc, int type)
+{
+    int i;
+    loc_t new_loc;
+    int best;
+
+    best = INFINITY;
+
+    FOR_ADJ (loc, new_loc, i)
+	if (pmap[new_loc].terrain == type && pmap[new_loc].cost < best)
+	    best = pmap[new_loc].cost;
+
+    return best;
+}
+#endif
+
+loc_t
+vmap_find_wlobj(path_map_t path_map[], view_map_t *vmap, 
+		 loc_t loc, move_info_t *move_info)
+{
+    perimeter_t *cur_land;
+    perimeter_t *cur_water;
+    perimeter_t *new_land;
+    perimeter_t *new_water;
+    int cur_cost;
+
+    cur_land = &p1;
+    cur_water = &p2;
+    new_water = &p3;
+    new_land = &p4;
+	
+    start_perimeter (path_map, cur_water, loc, T_WATER);
+    cur_land->len = 0;
+    cur_cost = 0; /* cost to reach current perimeter */
+
+    for (;;) {
+	/* expand current perimeter one cell */
+	new_water->len = 0;
+	new_land->len = 0;
+	expand_perimeter (path_map, vmap, move_info, cur_water,
+			  T_AIR, cur_cost, 1, 2, new_water, new_land);
+
+	expand_perimeter (path_map, vmap, move_info, cur_land,
+			  T_LAND, cur_cost, 1, 2, NULL, new_land);
+				  
+	/* expand new water one cell to water */
+	cur_water->len = 0;
+	expand_perimeter (path_map, vmap, move_info, new_water,
+			  T_WATER, cur_cost+1, 1, 1, cur_water, NULL);
+				  
+	if (trace_pmap)
+	    print_pzoom ("After wlobj loop:", path_map, vmap);
+		
+	cur_cost += 2;
+	if ( (cur_water->len == 0 && new_land->len == 0) || 
+	     (best_cost <= cur_cost) ) {
+	    return best_loc;
+	}
+	SWAP (cur_land, new_land);
+    }
+}
+
+static path_map_t pmap_init[MAP_SIZE];
+static bool init_done = false;
+
+static void
+start_perimeter(path_map_t *pmap, perimeter_t *perim, loc_t loc, int terrain)
+{
+    /* zap the path map */
+    if (!init_done) {
+	int i;
+	
+	init_done = true;
+	for (i = 0; i < MAP_SIZE; i++) {
+	    pmap_init[i].cost = INFINITY; /* everything lies outside perim */
+	    pmap_init[i].terrain = T_UNKNOWN;
+	}
+    }
+    (void) memcpy ((char *)pmap, (char *)pmap_init, sizeof (pmap_init));
+	
+    /* put first location in perimeter */
+    pmap[loc].cost = 0;
+    pmap[loc].inc_cost = 0;
+    pmap[loc].terrain = terrain;
+
+    perim->len = 1;
+    perim->list[0] = loc;
+	
+    best_cost = INFINITY; /* no best yet */
+    best_loc = loc; /* if nothing found, result is current loc */
+}
+
+
+static void
+expand_perimeter(path_map_t *pmap, view_map_t *vmap, move_info_t *move_info, 
+		  perimeter_t *curp, 
+		  int type, int cur_cost, int inc_wcost, int inc_lcost, 
+		  perimeter_t *waterp, perimeter_t *landp)
+{
+    register long i;
+    register int j;
+    loc_t new_loc;
+    int obj_cost;
+    register int new_type;
+
+    for (i = 0; i < curp->len; i++) /* for each perimeter cell... */
+	FOR_ADJ_ON (curp->list[i], new_loc, j) {/* for each adjacent cell... */
+	    register path_map_t *pm = pmap + new_loc;
+
+	    if (pm->cost == INFINITY) {
+		new_type = terrain_type (pmap, vmap, move_info, curp->list[i], new_loc);
+
+		if (new_type == T_LAND && (type & T_LAND))
+		    add_cell (pmap, new_loc, landp, new_type, cur_cost, inc_lcost);
+		else if (new_type == T_WATER && (type & T_WATER))
+		    add_cell (pmap, new_loc, waterp, new_type, cur_cost, inc_wcost);
+		else if (new_type == T_UNKNOWN) { /* unreachable cell? */
+		    pm->terrain = new_type;
+		    pm->cost = cur_cost + INFINITY/2;
+		    pm->inc_cost = INFINITY/2;
+		}
+		if (pmap[new_loc].cost != INFINITY) { /* did we expand? */
+		    obj_cost = objective_cost (vmap, move_info, new_loc, cur_cost);
+		    if (obj_cost < best_cost) {
+			best_cost = obj_cost;
+			best_loc = new_loc;
+			if (new_type == T_UNKNOWN) {
+			    pm->cost=cur_cost+2;
+			    pm->inc_cost = 2;
+			}
+		    }
+		}
+	    }
+	}
+}
+			
+/* Add a cell to a perimeter list. */
+	
+static void
+add_cell(path_map_t *pmap, loc_t new_loc, 
+	  perimeter_t *perim, int terrain, int cur_cost, int inc_cost)
+{
+    register	path_map_t	*pm = &pmap[new_loc];
+
+    pm->terrain = terrain;
+    pm->inc_cost = inc_cost;
+    pm->cost = cur_cost + inc_cost;
+
+    perim->list[perim->len] = new_loc;
+    perim->len += 1;
+}
+
+static int
+objective_cost(view_map_t *vmap, move_info_t *move_info, 
+		loc_t loc, int base_cost)
+{
+    char *p;
+    int w;
+    city_info_t *cityp;
+
+    p = strchr (move_info->objectives, vmap[loc].contents);
+    if (!p) return INFINITY;
+
+    w = move_info->weights[p - move_info->objectives];
+    if (w >= 0) return w + base_cost;
+
+    switch (w) {
+    case W_TT_BUILD:
+	/* handle special case of moving to tt building city */
+	cityp = find_city (loc);
+	if (!cityp) return base_cost + 2; /* tt is already here */
+	if (cityp->prod != TRANSPORT) return base_cost + 2; /* just finished a tt */
+	
+	/* compute time to wait for tt to be built */
+	w = piece_attr[TRANSPORT].build_time - cityp->work;
+	w *= 2; /* had to cross land to get here */
+	if (w < base_cost + 2) w = base_cost + 2;
+	return w;
+
+    default:
+	ABORT;
+	/* NOTREACHED */
+	return -1;
+    }
+
+
+static int
+terrain_type(path_map_t *pmap, view_map_t *vmap, move_info_t *move_info,
+	      loc_t from_loc, loc_t to_loc)
+{
+    if (vmap[to_loc].contents == MAP_LAND) return T_LAND;
+    if (vmap[to_loc].contents == MAP_SEA) return T_WATER;
+    if (vmap[to_loc].contents == '%') return T_UNKNOWN; /* magic objective */
+    if (vmap[to_loc].contents == ' ') return pmap[from_loc].terrain;
+	
+    switch (map[to_loc].contents) {
+    case MAP_SEA: return T_WATER;
+    case MAP_LAND: return T_LAND;
+    case MAP_CITY:
+	if (map[to_loc].cityp->owner == move_info->city_owner)
+	    return T_WATER;
+	else
+	    return T_UNKNOWN; /* cannot cross */
+    }
+    ABORT;
+    /*NOTREACHED*/
+    return -1;
+}
+
+void
+vmap_prune_explore_locs(view_map_t *vmap)
+{
+    path_map_t pmap[MAP_SIZE];
+    perimeter_t *from, *to;
+    int explored;
+    loc_t loc, new_loc;
+    count_t i;
+    long copied;
+
+    (void) memset (pmap, '\0', sizeof (pmap));
+    from = &p1;
+    to = &p2;
+    from->len = 0;
+    explored = 0;
+	
+    /* build initial path map and perimeter list */
+    for (loc = 0; loc < MAP_SIZE; loc++) {
+	if (vmap[loc].contents != ' ')
+	    explored += 1;
+	else { /* add unexplored cell to perim */
+	    FOR_ADJ (loc, new_loc, i) {
+		if (new_loc < 0 || new_loc >= MAP_SIZE); /* ignore off map */
+		else if (vmap[new_loc].contents == ' '); /* ignore adjacent unexplored */
+		else if (map[new_loc].contents != MAP_SEA)
+		    pmap[loc].cost += 1; /* count land */
+		else pmap[loc].inc_cost += 1; /* count water */
+	    }
+	    if (pmap[loc].cost || pmap[loc].inc_cost) {
+		from->list[from->len] = loc;
+		from->len += 1;
+	    }
+	}
+    }
+				
+    if (print_vmap == 'I')
+	print_xzoom (vmap);
+		
+    for (;;) { /* do high probability predictions */
+	if (from->len + explored == MAP_SIZE) return;
+	to->len = 0;
+	copied = 0;
+		
+	for (i = 0; i < from->len; i++) {
+	    loc = from->list[i];
+	    if (pmap[loc].cost >= 5)
+		expand_prune (vmap, pmap, loc, T_LAND, to, &explored);
+	    else if (pmap[loc].inc_cost >= 5)
+		expand_prune (vmap, pmap, loc, T_WATER, to, &explored);
+	    else if ((loc < MAP_WIDTH || loc >= MAP_SIZE-MAP_WIDTH) && pmap[loc].cost >= 3)
+		expand_prune (vmap, pmap, loc, T_LAND, to, &explored);
+	    else if ((loc < MAP_WIDTH || loc >= MAP_SIZE-MAP_WIDTH) && pmap[loc].inc_cost >= 3)
+		expand_prune (vmap, pmap, loc, T_WATER, to, &explored);
+	    else if ((loc == 0 || loc == MAP_SIZE-1) && pmap[loc].cost >= 2)
+		expand_prune (vmap, pmap, loc, T_LAND, to, &explored);
+	    else if ((loc == 0 || loc == MAP_SIZE-1) && pmap[loc].inc_cost >= 2)
+		expand_prune (vmap, pmap, loc, T_WATER, to, &explored);
+	    else { /* copy perimeter cell */
+		to->list[to->len] = loc;
+		to->len += 1;
+		copied += 1;
+	    }
+	}
+	if (copied == from->len) break; /* nothing expanded */
+	SWAP (from, to);
+    }
+	
+    if (print_vmap == 'I')
+	print_xzoom (vmap);
+		
+    /* one pass for medium probability predictions */
+    if (from->len + explored == MAP_SIZE)
+	return;
+    to->len = 0;
+	
+    for (i = 0; i < from->len; i++) {
+	loc = from->list[i];
+	if (pmap[loc].cost > pmap[loc].inc_cost)
+	    expand_prune (vmap, pmap, loc, T_LAND, to, &explored);
+	else if (pmap[loc].cost < pmap[loc].inc_cost)
+	    expand_prune (vmap, pmap, loc, T_WATER, to, &explored);
+	else { /* copy perimeter cell */
+	    to->list[to->len] = loc;
+	    to->len += 1;
+	}
+    }
+    SWAP (from, to);
+
+    if (print_vmap == 'I') print_xzoom (vmap);
+		
+    /* multiple low probability passes */
+    for (;;) {
+	/* return if very little left to explore */
+	if (from->len + explored >= MAP_SIZE - MAP_HEIGHT) {
+	    if (print_vmap == 'I') print_xzoom (vmap);
+	    return;
+	}
+	to->len = 0;
+	copied = 0;
+		
+	for (i = 0; i < from->len; i++) {
+	    loc = from->list[i];
+	    if (pmap[loc].cost >= 4 && pmap[loc].inc_cost < 4)
+		expand_prune (vmap, pmap, loc, T_LAND, to, &explored);
+	    else if (pmap[loc].inc_cost >= 4 && pmap[loc].cost < 4)
+		expand_prune (vmap, pmap, loc, T_WATER, to, &explored);
+	    else if ((loc < MAP_WIDTH || loc >= MAP_SIZE-MAP_WIDTH) && pmap[loc].cost > pmap[loc].inc_cost)
+		expand_prune (vmap, pmap, loc, T_LAND, to, &explored);
+	    else if ((loc < MAP_WIDTH || loc >= MAP_SIZE-MAP_WIDTH) && pmap[loc].inc_cost > pmap[loc].cost)
+		expand_prune (vmap, pmap, loc, T_WATER, to, &explored);
+	    else { /* copy perimeter cell */
+		to->list[to->len] = loc;
+		to->len += 1;
+		copied += 1;
+	    }
+	}
+	if (copied == from->len) break; /* nothing expanded */
+	SWAP (from, to);
+    }
+    if (print_vmap == 'I') print_xzoom (vmap);
+}
+
+static void
+expand_prune(view_map_t *vmap, path_map_t *pmap,
+	      loc_t loc, int type, perimeter_t *to, int *explored)
+{
+    int i;
+    loc_t new_loc;
+	
+    *explored += 1;
+	
+    if (type == T_LAND)
+	vmap[loc].contents = MAP_LAND;
+    else
+	vmap[loc].contents = MAP_SEA;
+	
+    FOR_ADJ (loc, new_loc, i)
+	if (new_loc >= 0 && new_loc < MAP_SIZE && vmap[new_loc].contents == ' ') {
+	    if (!pmap[new_loc].cost && !pmap[new_loc].inc_cost) {
+		to->list[to->len] = new_loc;
+		to->len += 1;
+	    }
+	    if (type == T_LAND)
+		pmap[new_loc].cost += 1;
+	    else pmap[new_loc].inc_cost += 1;
+	}
+}
+	
+{
+    perimeter_t *from;
+    perimeter_t *to;
+    int cur_cost;
+    int start_terrain;
+    move_info_t move_info;
+    char old_contents;
+
+    old_contents = vmap[dest_loc].contents;
+    vmap[dest_loc].contents = '%'; /* mark objective */
+    move_info.city_owner = owner;
+    move_info.objectives = "%";
+    move_info.weights[0] = 1;
+
+    from = &p1;
+    to = &p2;
+	
+    if (terrain == T_AIR) start_terrain = T_LAND;
+    else start_terrain = terrain;
+	
+    start_perimeter (path_map, from, cur_loc, start_terrain);
+    cur_cost = 0; /* cost to reach current perimeter */
+
+    for (;;) {
+	to->len = 0; /* nothing in perim yet */
+	expand_perimeter (path_map, vmap, &move_info, from,
+			  terrain, cur_cost, 1, 1, to, to);
+	cur_cost += 1;
+	if (to->len == 0 || best_cost <= cur_cost) {
+	    vmap[dest_loc].contents = old_contents;
+	    return best_loc;
+	}
+	SWAP (from, to);
+    }
+}
+
+
+void
+vmap_mark_path(path_map_t *path_map, view_map_t *vmap, loc_t dest)
+{
+    int n;
+    loc_t new_dest;
+
+    if (path_map[dest].cost == 0) return; /* reached end of path */
+    if (path_map[dest].terrain == T_PATH) return; /* already marked */
+
+    path_map[dest].terrain = T_PATH; /* this square is on path */
+
+    /* loop to mark adjacent squares on shortest path */
+    FOR_ADJ (dest, new_dest, n)
+	if (path_map[new_dest].cost == path_map[dest].cost - path_map[dest].inc_cost)
+	    vmap_mark_path (path_map, vmap, new_dest);
+
+}
+
+void
+vmap_mark_adjacent(path_map_t path_map[], loc_t loc)
+{
+    int i;
+    loc_t new_loc;
+
+    FOR_ADJ_ON (loc, new_loc, i)
+	path_map[new_loc].terrain = T_PATH;
+}
+
+void
+vmap_mark_near_path(path_map_t path_map[], loc_t loc)
+{
+    int i, j;
+    loc_t new_loc, xloc;
+    int hit_loc[8];
+
+    (void) memset ((char *)hit_loc, '\0', sizeof(int)*8);
+	
+    FOR_ADJ_ON (loc, new_loc, i) {
+	FOR_ADJ_ON (new_loc, xloc, j)
+	    if (xloc != loc && path_map[xloc].terrain == T_PATH) {
+		hit_loc[i] = 1;
+		break;
+	    }
+    }
+    for (i = 0; i < 8; i++)
+	if (hit_loc[i])
+	    path_map[loc + dir_offset[i]].terrain = T_PATH;
+}
+
+loc_t
+vmap_find_dir(path_map_t path_map[], view_map_t *vmap,
+	      loc_t loc, char *terrain, char *adj_char)
+{
+    int i, count, bestcount;
+    loc_t bestloc;
+    int path_count, bestpath;
+    char *p;
+	
+    if (trace_pmap)
+	print_pzoom ("Before vmap_find_dir:", path_map, vmap);
+		
+    bestcount = -INFINITY; /* no best yet */
+    bestpath = -1;
+    bestloc = loc;
+	
+    for (i = 0; i < 8; i++) { /* for each adjacent square */
+	loc_t new_loc = loc + dir_offset[order[i]];
+	if (path_map[new_loc].terrain == T_PATH) { /* which is on path */
+	    p = strchr (terrain, vmap[new_loc].contents);
+			
+	    if (p != NULL) { /* desirable square? */
+		count = vmap_count_adjacent (vmap, new_loc, adj_char);
+		path_count = vmap_count_path (path_map, new_loc);
+				
+		/* remember best location */
+		if (count > bestcount
+		    || (count == bestcount && path_count > bestpath) ) {
+		    bestcount = count;
+		    bestpath = path_count;
+		    bestloc = new_loc;
+		}
+	    }
+	}
+    }
+    return (bestloc);
+}
+
+int
+vmap_count_adjacent(view_map_t *vmap, loc_t loc, char *adj_char)
+{
+    int i, count;
+    loc_t new_loc;
+    char *p;
+    int len;
+
+    len = strlen (adj_char);
+
+    count = 0;
+	
+    FOR_ADJ_ON (loc, new_loc, i) {
+	p = strchr (adj_char, vmap[new_loc].contents);
+	if (p) count += 8 * (len - (p - adj_char));
+    }
+    return (count);
+}
+
+/*
+Count the number of adjacent cells that are on the path.
+*/
+
+int
+vmap_count_path(path_map_t *pmap, loc_t loc)
+{
+    int i, count;
+    loc_t new_loc;
+
+    count = 0;
+	
+    FOR_ADJ_ON (loc, new_loc, i)
+	if (pmap[new_loc].terrain == T_PATH)
+	    count += 1;
+
+    return (count);
+}
+
+/*
+See if a location is on the shore.  We return true if a surrounding
+cell contains water and is on the board.
+*/
+
+bool
+rmap_shore(loc_t loc)
+{
+    loc_t i, j;
+
+    FOR_ADJ_ON (loc, j, i)
+	if (map[j].contents == MAP_SEA)
+	    return (true);
+
+    return (false);
+}
+
+bool
+vmap_shore(view_map_t *vmap, loc_t loc)
+{
+    loc_t i, j;
+
+    FOR_ADJ_ON (loc, j, i)
+	if (vmap[j].contents != ' ' &&
+	    vmap[j].contents != MAP_LAND &&
+	    map[j].contents == MAP_SEA)
+	    return (true);
+
+    return (false);
+}
+
+/*
+Return true if a location is surrounded by ocean.  Off board locations
+which cannot be moved to are treated as ocean.
+*/
+
+bool
+vmap_at_sea(view_map_t *vmap, loc_t loc)
+{
+    loc_t i, j;
+
+    if (map[loc].contents != MAP_SEA)
+	return (false);
+    FOR_ADJ_ON (loc, j, i)
+	if (vmap[j].contents == ' '
+	    || vmap[j].contents == MAP_LAND
+	    || map[j].contents != MAP_SEA)
+	    return (false);
+
+    return (true);
+}
+
+bool
+rmap_at_sea (loc_t loc)
+{
+    loc_t i, j;
+
+    if (map[loc].contents != MAP_SEA)
+	return (false);
+    FOR_ADJ_ON (loc, j, i) {
+	if (map[j].contents != MAP_SEA)
+	    return (false);
+    }
+    return (true);
+}
+
+/* end */

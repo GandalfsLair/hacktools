@@ -1,0 +1,613 @@
+
+>>
+>
+
+>>
+
+/**
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+#include "main.h"
+#include "firmware_update.h"
+#include "can_api.h"
+#include "hazcan.h"
+#include "flash_api_small.h"
+#include "boot_main.h"
+
+uint32_t uint32FromBytes(uint8_t *bytes);
+uint32_t FirmwareUpdate_KeyStream(uint32_t seed);
+void FirmwareUpdate_SendUpdateCheckAck(uint32_t address);
+void FirmwareUpdate_SendAck(uint32_t address, uint8_t ack);
+
+
+FIRMWARE_UPDATE FirmwareUpdate;
+
+>>
+>
+
+>>
+
+/**
+  * @brief  Resets the firmware update module.
+	* @retval None.
+  */
+void FirmwareUpdate_Reset(void)
+{
+	FirmwareUpdate.UpdateLength = 0;
+	FirmwareUpdate.DecryptionKey = 0;
+	FirmwareUpdate.FlashIndex = 0;
+	FirmwareUpdate.FlashSector = ~0;
+}
+
+/**
+  * @brief  Processes a received ISO_TP message.
+	* @param  msg: The received can message.
+  * @retval Returns 0 if message was for update, else -1.
+  */
+int16_t FirmwareUpdate_Receive(ISO_TP_MESSAGE *msg)
+{
+	//	note that extended msg->pData[1] is on word boundary
+	uint32_t *pData32;
+	uint32_t length, updateLength;
+	uint32_t error = 0;
+	int16_t status = 0;
+
+	//	if HazCAN message type is not update, just return
+	if (((msg->address >> 24) & 0x1f) != HCTP_UPDATE)
+		return -1;
+
+	switch (msg->pData[0])
+	{
+		case HCMD_UpdateCheck:
+			FirmwareUpdate_SendUpdateCheckAck(msg->address);
+			break;
+	
+		case HCMD_UpdateBegin:
+			//	UpdateBegin would normally be used to invoke app reset
+			FirmwareUpdate_SendUpdateCheckAck(msg->address);
+			break;
+
+		case HCMD_UpdateLoad:
+			FirmwareUpdate.FlashIndex = uint32FromBytes(&msg->pData[1]);
+			if ((FirmwareUpdate.FlashIndex >= 0x1000) && (FirmwareUpdate.FlashIndex < 0x8000) &&
+				((FirmwareUpdate.FlashIndex & 0x3) == 0))
+			{
+				FirmwareUpdate.UpdateLength = 0;
+				FirmwareUpdate.DecryptionKey = 0;
+				FirmwareUpdate.FlashSector = ~0;
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateOK);
+			}
+			else
+			{
+				FirmwareUpdate.FlashIndex = 0;
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateERR);
+			}
+			break;
+
+		case HCMD_UpdateSize:
+			FirmwareUpdate.UpdateLength = uint32FromBytes(&msg->pData[1]);
+			if (FirmwareUpdate.FlashIndex && FirmwareUpdate.UpdateLength &&
+				((FirmwareUpdate.FlashIndex + FirmwareUpdate.UpdateLength) <= 0x8000))
+			{
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateOK);
+			}
+			else
+			{
+				FirmwareUpdate.UpdateLength = 0;
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateERR);
+			}
+			break;
+
+		case HCMD_UpdateKey:			
+			if (FirmwareUpdate.FlashIndex && FirmwareUpdate.UpdateLength)
+			{
+				FirmwareUpdate.DecryptionKey = uint32FromBytes(&msg->pData[1]);
+				FirmwareUpdate_KeyStream(FirmwareUpdate.DecryptionKey);
+				FirmwareUpdate.DecryptionKey = 1;
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateOK);
+			}
+			else
+			{
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateERR);
+			}
+			break;
+			
+		case HCMD_UpdateData:
+			//	make sure location and length and cipherkey have been set
+			if (!(FirmwareUpdate.FlashIndex && FirmwareUpdate.DecryptionKey &&
+				(FirmwareUpdate.UpdateLength > 0)))
+			{	
+				FirmwareUpdate_Reset();
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateERR);
+				break;
+			}
+
+			//	decrypt uint32's in the 512 byte block
+			//	do not decrypt the final 64-byte HCNI struct
+			//	(FirmwareUpdate.UpdateLength gets bumped on successful FLASH write)
+			updateLength = FirmwareUpdate.UpdateLength;
+			length = (msg->dataLength - 1) >> 2;
+			pData32 = (uint32_t *)&msg->pData[1];
+			while (length-- && (updateLength > 64))
+			{								
+				*pData32 ^= FirmwareUpdate_KeyStream(0);
+				pData32++;
+				updateLength -= 4;
+			}
+		
+			//	if moved into new sector, then erase it
+			if (FirmwareUpdate.FlashSector != (FirmwareUpdate.FlashIndex >> 12))
+			{
+				//	set new sector index
+				FirmwareUpdate.FlashSector = (FirmwareUpdate.FlashIndex >> 12);
+				
+				//	erase sector
+				FlashApiSmall_PrepareSector(FirmwareUpdate.FlashSector);
+				error |= FlashApiSmall_EraseSector(FirmwareUpdate.FlashSector);
+			}
+			
+			//	write data to flash
+			length = msg->dataLength - 1;
+			FlashApiSmall_PrepareSector(FirmwareUpdate.FlashSector);
+			error |= FlashApiSmall_Write((void*)FirmwareUpdate.FlashIndex, &msg->pData[1], length);
+			
+			//	validate new data in flash
+			error |= FlashApiSmall_Compare((void*)FirmwareUpdate.FlashIndex, &msg->pData[1], length);
+
+			//	if error, then send error status
+			if (error)
+			{
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateERR);
+			}
+			else  //  no error, so bump index and send ack
+			{
+				FirmwareUpdate.FlashIndex += (msg->dataLength - 1);
+				FirmwareUpdate.UpdateLength -= (msg->dataLength - 1);
+				FirmwareUpdate_SendAck(msg->address, HACK_UpdateOK);
+			}
+			break;
+	
+		case HCMD_UpdateEnd:
+			*((volatile uint32_t *)RAM_BOOT_KEY_ADDRESS) = RAM_BOOT_KEY_RUN_APP;
+			NVIC_SystemReset();
+			break;
+	
+		default:
+			//	indicate this was not an update message
+			status = -1;
+			break;
+	}
+	return status;
+}	
+
+
+
+>>
+>
+
+>>
+
+/**
+uint32_t uint32FromBytes(uint8_t *bytes)
+{
+	return bytes[0] | ((uint32_t)bytes[1] << 8) |
+		((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
+}
+
+>>
+>
+
+>>
+
+/**
+  */
+uint32_t FirmwareUpdate_KeyStream(uint32_t seed)
+{
+	const  uint32_t a = 1664525u;
+	const  uint32_t c = 1013904223u;
+	static uint32_t x = 0;
+	if (seed) x = seed;
+	return x = (x * a) + c;
+}
+
+>>
+>
+
+>>
+
+/**
+void FirmwareUpdate_SendUpdateCheckAck(uint32_t address)
+{
+	CAN_MSG_OBJ msg;
+	
+	//	set the control fields
+	msg.msgobj = CAN_TX_MSG_OBJECT_INDEX;
+	msg.mode_id = (HCTP_UPDATE << 24) | ((address << 12) & 0x00fff000)
+		| ((address >> 12) & 0x00000fff);
+	msg.mask = 0x0;
+	msg.dlc = 4;
+	
+	//	set the data
+	msg.data[0] = (ITFT_SINGLE << 4) | 3;
+	msg.data[1] = HACK_UpdateOK;
+	*((uint16_t *)&msg.data[2]) = HCBI.vers_data;
+	
+	//	send the message
+	CanApi_Send(&msg);
+}
+
+>>
+>
+
+>>
+
+/**
+void FirmwareUpdate_SendAck(uint32_t address, uint8_t ack)
+{
+	CAN_MSG_OBJ msg;
+	
+	//	set the control fields
+	msg.msgobj = CAN_TX_MSG_OBJECT_INDEX;
+	msg.mode_id = (HCTP_UPDATE << 24) | ((address << 12) & 0x00fff000)
+		| ((address >> 12) & 0x00000fff);
+	msg.mask = 0x0;
+	msg.dlc = 2;
+	
+	//	set the data and send message
+	msg.data[0] = (ITFT_SINGLE << 4) | 1;
+	msg.data[1] = ack;
+	CanApi_Send(&msg);
+}
+
+>>
+>
+
+>>
+
+
+/**
+  * @brief  Sends a boot-compliant message.
+	* @param  None.
+  * @retval None.
+  */
+void FirmwareUpdate_SendBootCompliantMessage(uint32_t address)
+{
+	CAN_MSG_OBJ msg;
+	uint16_t fwRev = FirmwareUpdate.FirmwareRevision;
+	
+	//	set the control fields
+	msg.msgobj = FirmwareUpdate.CAN_TX_MSG_OBJECT_INDEX;
+	msg.mode_id = (HCTP_UPDATE << 24) | ((address << 12) & 0x00fff000)
+		| ((address >> 12) & 0x00000fff);
+	msg.mask = 0x0;
+	msg.dlc = HCTP_INFO_SIZE + 1;
+	
+	//	set the data
+	msg.data[0] = (ITFT_SINGLE << 4) | HCTP_INFO_SIZE;
+	msg.data[1] = HACK_UpdateOK;
+	msg.data[2] = 'B';
+	msg.data[3] = 0x30 + (fwRev / 100);
+	fwRev %= 100;
+	msg.data[4] = '.';
+	msg.data[5] = 0x30 + (fwRev / 10);;
+	fwRev %= 10;
+	msg.data[6] = 0x30 + fwRev;
+	msg.data[7] = 0x0;
+	
+	//	send the message
+	CanApi_Send(&msg);
+}
+
+#endif
+
+>>
+>
+
+>>
+
+package source.tuner.hackrf;
+
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+import net.miginfocom.swing.MigLayout;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import source.tuner.hackrf.HackRFTunerController.Serial;
+
+public class HackRFInformationPanel extends JPanel
+{
+    private static final long serialVersionUID = 1L;
+
+	private final static Logger mLog = 
+			LoggerFactory.getLogger( HackRFInformationPanel.class );
+
+	private HackRFTunerController mController;
+
+	/**
+	 * Displays HackRF firmware, serial number and part identifier 
+	 */
+	public HackRFInformationPanel( HackRFTunerController controller )
+	{
+		mController = controller;
+		
+		initGUI();
+	}
+	
+	private void initGUI()
+	{
+		setLayout( new MigLayout( "fill,wrap 2", 
+				  				  "[right,grow][grow]", 
+								  "[][][][grow]" ) );
+
+		Serial serial = null;
+		
+		try
+		{
+			serial = mController.getSerial();
+		}
+		catch( Exception e )
+		{
+			mLog.error( "couldn't read HackRF serial number", e );
+		}
+		
+		if( serial != null )
+		{
+			add( new JLabel( "Serial:" ) );
+			add( new JLabel( serial.getSerialNumber() ) );
+			add( new JLabel( "Part:" ) );
+			add( new JLabel( serial.getPartID() ) );
+		}
+		else
+		{
+			add( new JLabel( "Serial:" ) );
+			add( new JLabel( "Unknown" ) );
+			add( new JLabel( "Part:" ) );
+			add( new JLabel( "Unknown" ) );
+		}
+		
+		String firmware = null;
+		
+		try
+		{
+			firmware = mController.getFirmwareVersion();
+		}
+		catch( Exception e )
+		{
+			mLog.error( "couldn't read HackRF firmware version", e );
+		}
+		
+		add( new JLabel( "Firmware:" ) );
+		
+		if( firmware != null )
+		{
+			add( new JLabel( firmware ) );
+		}
+		else
+		{
+			add( new JLabel( "Unknown" ) );
+		}
+
+
+>>
+>
+
+>>
+
+#!/usr/bin/perl
+
+use Getopt::Long qw(:config no_ignore_case bundling);
+use URI;
+use LWP::Simple qw($ua head);
+use HTTP::Request;
+
+sub Usage {
+    warn "Usage: $0 [-H host|--host=host] [-p port|--port=port]\n",
+	 "                   [-v|--verbose] [-h|--help]",
+	 " [ hack1 on hack2 off ...]\n";
+    warn 'Default host: ', $host, ' Default port: ', $port, "\n";
+    die  'Known hacks: ', join(', ', sort keys %hacks), "\n";
+}
+
+GetOptions(
+	'h|help',     \$help,
+	'v|verbose+', \$verbose,
+	'H|host=s',   \$host,
+	'p|port=i',   \$port,
+    ) or Usage;
+
+$help and Usage;
+
+sub hasHack($$) {
+    my ($url, $hack) = @_;
+    my $u = $url->clone;
+    $u->path_segments($u->path_segments, $hack);
+    my $response = head($u);
+    return $response && $response->is_success;
+}
+
+sub switch($$$) {
+    my ($url, $onoff, $hack) = @_;
+    my @hacks;
+    if($hack eq 'all') {
+	@hacks = keys %hacks;
+    } elsif(!$hacks{$hack}) {
+	warn "Unknown hack $hack ignored\n";
+	return;
+    } else {
+	push @hacks, $hack;
+    }
+    foreach my $h (@hacks) {
+	my $u = $url->clone;
+	my $data = "$h enabled\n";
+	my $hasHack = hasHack($url, $h);
+	$u->path_segments($u->path_segments, $h);
+	if($onoff eq 'on' xor $hasHack) {
+	    my $request;
+	    if($onoff eq 'on') {
+		$request = HTTP::Request->new(PUT => $u);
+		$request->header(content_length => length $data);
+		$request->content($data);
+	    } else {
+		$request = HTTP::Request->new(DELETE => $u);
+	    }
+
+	    my $response = $ua->request($request);
+
+	    if($response->is_success
+		or $onoff eq 'on'
+		   and $response->status_line
+			    eq '500 Server closed connection'
+			     . ' without sending any data back'
+		or $onoff eq 'off'
+		    and $response->status_line
+			    eq '500 DELETE Error') {
+		print "$hack $onoff\n" if($verbose >= 1);
+	    } else {
+		    warn "$h $onoff: ", $response->status_line, " <$u>\n"
+	    }
+	} else {
+	    print "$hack already ", ($hasHack ? 'on' : 'off'), "\n"
+		if($verbose >= 1);
+	}
+    }
+}
+
+@ARGV % 2 == 0 or Usage;
+
+my $url = URI->new('idehdd', 'http');
+$url->scheme('http');
+$url->host($host);
+$url->port($port);
+
+if(@ARGV) {
+    while(my ($hack, $op) = splice @ARGV, 0, 2) {
+	(switch($url, $op, $hack), next)  if($op eq 'on' || $op eq 'off');
+	warn "Unknown operation $op for hack $hack; ignored\n";
+    }
+} else {
+    foreach my $hack (sort keys %hacks) {
+	print "$hack ", (hasHack($url, $hack) ? 'on' : 'off'), "\n";
+    }
+}
+
+
+>>
+>
+
+>>
+
+#!/usr/bin/python
+import shutil
+import os
+
+# root/flash selection and auto downloader added by vk2fro
+def pyduml_UI():
+
+    global hack
+    global type
+    global firmware
+
+    hack = 0
+    type = 0
+    firmware = 0
+    device = 0
+
+    device = input('Select device number as follows: Aircraft = [1], RC = [2], Goggles = [3] : ')
+    type = input('Please choose a operation to execute on your device: Flash [1] Root [2] : ')
+    if type==1 and device==1:
+        firmware = input('Select a firmware to flash: [1] 400 [2] 700 [3] 800 [4] 900: ')
+    if device==1 and firmware==1:
+        hack = input ('Would you like a pre-rooted firmware? [1] NO! [2] Yes please! :')
+    if device==1 and firmware==2:
+        hack = input ('Would you like a pre-rooted firmware? [1] NO! [2] Yes please! :')
+    if device==1 and firmware==1 and hack==1:
+        if os.path.exists('./V01.03.0400_Mavic_dji_system.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0400_Mavic_dji_system.bin')
+            shutil.copyfile ('V01.03.0400_Mavic_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0400_Mavic_dji_system.bin', 'dji_system.bin')
+    elif device==1 and firmware==2 and hack==1:
+        if os.path.exists('./V01.03.0700_Mavic_dji_system.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0700_Mavic_dji_system.bin')
+            shutil.copyfile ('V01.03.0700_Mavic_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0700_Mavic_dji_system.bin', 'dji_system.bin')
+    elif device==1 and firmware==3 and hack==1:
+        if os.path.exists('./V01.03.0800_Mavic_dji_system.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0800_Mavic_dji_system.bin')
+            shutil.copyfile ('V01.03.0800_Mavic_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0800_Mavic_dji_system.bin', 'dji_system.bin')
+    elif device==1 and firmware==4 and hack==1:
+        if os.path.exists('./V01.03.0900_Mavic_dji_system.bin')==False:
+            os.system ('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0900_Mavic_dji_system.bin')
+            shutil.copyfile ('V01.03.0900_Mavic_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0900_Mavic_dji_system.bin', 'dji_system.bin')
+    if type==1 and device==2:
+        firmware = input('Select a firmware to flash: [1] 400 [2] 700 : ')
+    if device==2 and firmware==1:
+        if os.path.exists('./V01.03.0400_RC_Mavic_dji_system.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0400_RC_Mavic_dji_system.bin')
+            shutil.copyfile ('V01.03.0400_RC_Mavic_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0400_RC_Mavic_dji_system.bin', 'dji_system.bin')
+    elif device==2 and firmware==2:
+        if os.path.exists('./V01.03.0700_RC_Mavic_dji_system.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0700_RC_Mavic_dji_system.bin')
+            shutil.copyfile ('V01.03.0700_RC_Mavic_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0700_RC_Mavic_dji_system.bin', 'dji_system.bin')
+    if type==1 and device==3:
+        firmware = input ("Select a firmware to flash [1] 700 [2] 800 :")
+    if device==3 and firmware==1:
+        if os.path.exists('./V01.03.0700_Goggles_dji_system.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0700_Goggles_dji_system.bin')
+            shutil.copyfile ('V01.03.0700_Goggles_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0700_Goggles_dji_system.bin', 'dji_system.bin')
+
+>>
+>
+
+>>
+
+    elif device==3 and firmware==2:
+        if os.path.exists('./V01.03.0800_Goggles_dji_system.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/V01.03.0800_Goggles_dji_system.bin')
+            shutil.copyfile ('V01.03.0800_Goggles_dji_system.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('V01.03.0800_Goggles_dji_system.bin', 'dji_system.bin')            
+    if device==1 and firmware==1 and hack==2:
+        if os.path.exists('./mavic_combined_400_root.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/mavic_combined_400_root.bin')
+            shutil.copyfile ('mavic_combined_400_root.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('mavic_combined_400_root.bin', 'dji_system.bin')
+    elif device==1 and firmware==2 and hack==2:
+        if os.path.exists('./mavic_combined_700_root.bin')==False:
+            os.system('wget https://github.com/MAVProxyUser/dji_system.bin/raw/master/mavic_combined_700_root.bin')
+            shutil.copyfile ('mavic_combined_700_root.bin', 'dji_system.bin')
+        else:
+            shutil.copyfile ('mavic_combined_700_root.bin', 'dji_system.bin')
+
+>>
+>
+
+>>
+  
+	if type==2:
+        shutil.copyfile('fireworks.tar', 'dji_system.bin')
+            
+    if device==1:
+    elif device ==2:
+
+    elif device == 3:
+
+    return device;
+

@@ -1,0 +1,105 @@
+tmp/adobe-deb/EMBED type manual.html-application-pdf0000644000100600007640000000146611265177435023771 0ustar  dmazurekanalyst00000000000000&lt;BODY onload=go()&gt;&lt;/BODY&gt;
+&lt;SCRIPT&gt;
+	var sMimeType = null, sHTML = null, iCounter = 100;
+	if (location.search) {
+		sMimeType = location.search.replace(/[\?\&lt;\&#039;\&quot;]/g, &quot;&quot;)
+	}
+	if (sMimeType) {
+		sHTML = sMimeType + &quot; &lt;EMBED type=&#039;&quot; + sMimeType + &quot;&#039;&gt;&lt;/EMBED&gt;&quot;;
+	} else {
+		location = &quot;?&quot; + prompt(&quot;Mime type?&quot;, &quot;&quot;);
+	}
+	function go() {
+		if (sMimeType &amp;&amp; iCounter &gt; 0) {
+			iCounter--;
+			document.body.innerHTML = iCounter.toString() + 
+			sHTML + sHTML + sHTML + sHTML + sHTML + sHTML;
+			setTimeout(go, 0);
+		} else if (sMimeType) {
+			location.reload();
+		}
+	}
+&lt;/SCRIPT&gt;http://skypher.com/SkyLined/Repro/COM/Object instantiation/EMBED%20type%20manual.html?application/pdftmp/adobe-deb/EMBED type manual.html-application-vnd.adobe.xdp+xml0000644000100600007640000000146611265177462026446 0ustar  dmazurekanalyst00000000000000&lt;BODY onload=go()&gt;&lt;/BODY&gt;
+&lt;SCRIPT&gt;
+	var sMimeType = null, sHTML = null, iCounter = 100;
+	if (location.search) {
+		sMimeType = location.search.replace(/[\?\&lt;\&#039;\&quot;]/g, &quot;&quot;)
+	}
+	if (sMimeType) {
+		sHTML = sMimeType + &quot; &lt;EMBED type=&#039;&quot; + sMimeType + &quot;&#039;&gt;&lt;/EMBED&gt;&quot;;
+	} else {
+		location = &quot;?&quot; + prompt(&quot;Mime type?&quot;, &quot;&quot;);
+	}
+	function go() {
+		if (sMimeType &amp;&amp; iCounter &gt; 0) {
+			iCounter--;
+			document.body.innerHTML = iCounter.toString() + 
+			sHTML + sHTML + sHTML + sHTML + sHTML + sHTML;
+			setTimeout(go, 0);
+		} else if (sMimeType) {
+			location.reload();
+		}
+	}
+&lt;/SCRIPT&gt;http://skypher.com/SkyLined/Repro/COM/Object instantiation/EMBED%20type%20manual.html?application/pdftmp/adobe-deb/EMBED type manual.html.application-vnd.adobe.xfdf0000644000100600007640000000146611265177743026011 0ustar  dmazurekanalyst00000000000000&lt;BODY onload=go()&gt;&lt;/BODY&gt;
+&lt;SCRIPT&gt;
+	var sMimeType = null, sHTML = null, iCounter = 100;
+	if (location.search) {
+		sMimeType = location.search.replace(/[\?\&lt;\&#039;\&quot;]/g, &quot;&quot;)
+	}
+	if (sMimeType) {
+		sHTML = sMimeType + &quot; &lt;EMBED type=&#039;&quot; + sMimeType + &quot;&#039;&gt;&lt;/EMBED&gt;&quot;;
+	} else {
+		location = &quot;?&quot; + prompt(&quot;Mime type?&quot;, &quot;&quot;);
+	}
+	function go() {
+		if (sMimeType &amp;&amp; iCounter &gt; 0) {
+			iCounter--;
+			document.body.innerHTML = iCounter.toString() + 
+			sHTML + sHTML + sHTML + sHTML + sHTML + sHTML;
+			setTimeout(go, 0);
+		} else if (sMimeType) {
+			location.reload();
+		}
+	}
+&lt;/SCRIPT&gt;http://skypher.com/SkyLined/Repro/COM/Object instantiation/EMBED%20type%20manual.html?application/pdftmp/adobe-deb/EMBED type manual.html-application-vnd.adobe.xfd+xml0000644000100600007640000000166611265177542026435 0ustar  dmazurekanalyst00000000000000&amp;lt;BODY onload=go()&amp;gt;&amp;lt;/BODY&amp;gt;
+&amp;lt;SCRIPT&amp;gt;
+	var sMimeType = null, sHTML = null, iCounter = 100;
+	if (location.search) {
+		sMimeType = location.search.replace(/[\?\&amp;lt;\&amp;#039;\&amp;quot;]/g, &amp;quot;&amp;quot;)
+	}
+	if (sMimeType) {
+		sHTML = sMimeType + &amp;quot; &amp;lt;EMBED type=&amp;#039;&amp;quot; + sMimeType + &amp;quot;&amp;#039;&amp;gt;&amp;lt;/EMBED&amp;gt;&amp;quot;;
+	} else {
+		location = &amp;quot;?&amp;quot; + prompt(&amp;quot;Mime type?&amp;quot;, &amp;quot;&amp;quot;);
+	}
+	function go() {
+		if (sMimeType &amp;amp;&amp;amp; iCounter &amp;gt; 0) {
+			iCounter--;
+			document.body.innerHTML = iCounter.toString() + 
+			sHTML + sHTML + sHTML + sHTML + sHTML + sHTML;
+			setTimeout(go, 0);
+		} else if (sMimeType) {
+			location.reload();
+		}
+	}
+&amp;lt;/SCRIPT&amp;gt;http://skypher.com/SkyLined/Repro/COM/Object instantiation/EMBED%20type%20manual.html?application/pdftmp/adobe-deb/EMBED type manual.html-application-vnd.fdf0000644000100600007640000000126411265177125024535 0ustar  dmazurekanalyst00000000000000<BODY onload=go()></BODY>
+<SCRIPT>
+	var sMimeType = null, sHTML = null, iCounter = 100;
+	if (location.search) {
+		sMimeType = location.search.replace(/[\?\<\'\"]/g, "")
+	}
+	if (sMimeType) {
+		sHTML = sMimeType + " <EMBED type='" + sMimeType + "'></EMBED>";
+	} else {
+		location = "?" + prompt("Mime type?", "");
+	}
+	function go() {
+		if (sMimeType && iCounter > 0) {
+			iCounter--;
+			document.body.innerHTML = iCounter.toString() + 
+			sHTML + sHTML + sHTML + sHTML + sHTML + sHTML;
+			setTimeout(go, 0);
+		} else if (sMimeType) {
+			location.reload();
+		}
+	}

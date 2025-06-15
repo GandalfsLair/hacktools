@@ -1,0 +1,16 @@
+Keyboard Shortcuts
+
+Data on key codes can be found at keycode.info
+
+Hit the following keys three times and get a pop up with the corresponding message.
+
+1 SCANNING FOR MOBILE TOWERS
+2 TOWER DETECTED
+3 TOWER OUT OF RANGE
+4 TOWER BREACHED
+5 SCANNING FOR CELLS
+6 CELLS LOCATED
+7 ERROR
+8 ACCESSING CELL
+9 UID LOCATED
+0 BRIDGE COMPILED

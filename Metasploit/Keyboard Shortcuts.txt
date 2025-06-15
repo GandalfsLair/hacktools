@@ -1,0 +1,16 @@
+Keyboard Shortcuts
+
+Data on key codes can be found at keycode.info
+
+Hit the following keys three times and get a pop up with the corresponding message.
+
+1 Payload Compiling
+2 Payload Compiling - Pass
+3 Command Shell - Pass
+4 Command Shell - Fail
+5 Command Shell - Error
+6 Command Shell - Running
+7 Error!
+8 Fail!
+9 Success! 
+0 Payload - Running

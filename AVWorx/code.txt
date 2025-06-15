@@ -1,0 +1,491 @@
+
+#>
+#>>
+
+#>
+
+<div id="antivirusContent" ng-controller="AntivirusCtrl">
+	<div id="includeMenucontent">
+		<div ng-include="'views/administracion/menuAdministracion.html'" onload="includeCargado()"></div>
+	</div>
+	<div class="container">
+		<div class="input-field" style="max-width:30%;margin: 20px auto 20px auto;">
+			<i class="material-icons prefix">search</i>
+			<input placeholder="Buscar Antivirus" type="text" ng-model="search" style="font-size: 13pt;">
+		</div>
+
+		<table class="table table-bordered table-striped tableAdmCatEquipos">
+			<thead>
+				<tr>
+					<td class="tdCenter">
+						<a>N°</a>
+					</td>
+					<td class="tdCenter">
+						<a href="" ng-click="sortType = 'antivirus'; sortReverse = !sortReverse">Nombre</a>
+					</td>
+					<td class="tdCenter">
+						<a>Acciones</a>
+					</td>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="Antivirus in antivirus | orderBy:sortType:sortReverse | filter:search">
+					<td class="tdCenter">{{$index + 1}}</td>
+					<td class="tdDatos">{{ Antivirus.antivirus }}</td>
+					<td>
+						<div class="card-action" style="text-align:center;">
+							
+			<a href="" data-toggle="modal" data-target="#myModalEditarAntivirus" ng-click="modalEditarAntivirus(Antivirus.id_antivirus)">
+				<i class="material-icons">edit</i>
+				</a>
+			<a href=""ng-click="modalEliminarAntivirus(Antivirus.id_antivirus,Antivirus.antivirus)"data-toggle="modal" data-target="#myModalEliminarAntivirus">
+				<i class="material-icons">delete</i>
+				</a>
+			</div>
+				</td>
+				</tr>
+			</tbody>
+		</table>
+		<div class="fixed-action-btn" style="bottom: 45px; right: 24px;">
+		<a class="btn-floating btn-large waves-effect waves-light green" data-toggle="modal" data-target="#myModalCrearAntivirus" ng-click="limpiarFormAntivirus()">
+			<i class="large material-icons">add</i>
+			</a>
+		</div>
+
+#>
+#>>
+
+#>
+
+
+		<div id="myModalCrearAntivirus" class="modal fade" role="dialog">
+			<div class="modal-dialog">
+				<!-- Modal content-->
+				<div class="modal-content">
+					<form ng-submit="agregarAntivirus()">
+						<div class="modal-header">
+							<button type="button" class="close" data-dismiss="modal">&times;</button>
+							<h4 class="modal-title">Agregar Antivirus</h4>
+						</div>
+						<div class="modal-body">
+							<label for="">Nombre:</label>
+							<div class="input-field">
+						<input class="inputUsuario" type="text" ng-model="Antivirus.antivirus" class="validate" required="" aria-required="true">
+							</div>
+						</div>
+						<div class="modal-footer">
+							<div id="botoneraModalClasificacion">
+								<button type="button" class="btn red" data-dismiss="modal">Cancelar</button>
+								<button type="submit" class="btn green">Agregar</button>
+		</div>
+
+#>
+#>>
+
+#>
+
+
+		<div id="myModalEditarAntivirus" class="modal fade" role="dialog">
+			<div class="modal-dialog">
+				<!-- Modal content-->
+				<div class="modal-content">
+					<form ng-submit="editarAntivirus()">
+						<div class="modal-header">
+							<button type="button" class="close" data-dismiss="modal">&times;</button>
+							<h4 class="modal-title">Editar Antivirus</h4>
+						</div>
+						<div class="modal-body">
+							<label for="">Nombre:</label>
+							<div class="input-field">
+						<input class="inputUsuario" type="text" ng-model="AntivirusEditado.antivirus" class="validate" required="" aria-required="true">
+							</div>
+						</div>
+						<div class="modal-footer">
+							<div id="botoneraModalClasificacion">
+								<button type="button" class="btn red" data-dismiss="modal">Cancelar</button>
+								<button type="submit" class="btn green">Editar</button>
+		</div>
+
+#>
+#>>
+
+#>
+
+
+		<div id="myModalEliminarAntivirus" class="modal fade" role="dialog">
+			<div class="modal-dialog">
+				<!-- Modal content-->
+				<div class="modal-content">
+					<form ng-submit="eliminarAntivirus()">
+						<div class="modal-header">
+							<button type="button" class="close" data-dismiss="modal">&times;</button>
+							<h4 class="modal-title">Eliminar Antivirus</h4>
+						</div>
+						<div class="modal-body">
+							<div style="text-align:center;font-size:15pt;">
+								{{"¿Deseas eliminar '"+elementoEliminar+"'?"}}
+							</div>
+						</div>
+						<div class="modal-footer">
+							<div id="botoneraModalClasificacion">
+								<button type="button" class="btn red" data-dismiss="modal">Cancelar</button>
+								<button type="submit" class="btn green">Eliminar</button>
+
+#>
+#>>
+
+#>
+
+
+#!/bin/sh
+
+# $FreeBSD: tags/RELEASE_10_3_0/mail/antivirus-milter/files/antivirus-milter.in 340872 2014-01-24 00:14:07Z mat $
+
+# REQUIRE: DAEMON
+# BEFORE: mail
+# KEYWORD: shutdown
+
+#	/etc/rc.conf
+#	/etc/rc.conf.local
+#	/etc/rc.conf.d/antivirus
+
+antivirus_enable=${antivirus_enable:-"NO"}      # Enable antivirus-milter
+antivirus_pidfile=${antivirus_pidfile:-"%%ANTIVIRUS%%/run/antivirus.pid"} # Path to pidfile
+antivirus_socket=${antivirus_socket:-"%%ANTIVIRUS%%/antivirus.sock"} # Path to socket
+#antivirus_flags=${antivirus_flags:-""} # Flags to antivirus
+
+. /etc/rc.subr
+
+name="antivirus"
+rcvar="antivirus_enable"
+command="%%PREFIX%%/libexec/antivirus"
+required_files="%%PREFIX%%/etc/antivirus.conf"
+start_precmd="antivirus_prestart"
+stop_postcmd="antivirus_poststop"
+
+antivirus_prestart() {
+	/bin/rm -f "${pidfile}" "${antivirus_socket}"
+}
+
+antivirus_poststop() {
+	/bin/rm -f "${pidfile}" "${antivirus_socket}"
+}
+
+load_rc_config $name
+
+pidfile="${antivirus_pidfile}"
+command_args="-p local:${antivirus_socket} ${antivirus_flags}"
+
+run_rc_command "$1"
+
+#>
+#>>
+
+#>
+
+
+<?php
+defined('MOODLE_INTERNAL') || die();
+
+class antivirus_clamav_scanner_testcase extends advanced_testcase {
+    /** @var string temporary file used in testing */
+    protected $tempfile;
+
+    protected function setUp() {
+        $this->resetAfterTest();
+
+        // Create tempfile.
+        $tempfolder = make_request_directory(false);
+        $this->tempfile = $tempfolder . '/' . rand();
+        touch($this->tempfile);
+    }
+
+    protected function tearDown() {
+        @unlink($this->tempfile);
+    }
+
+    public function test_scan_file_not_exists() {
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods(array('scan_file_execute_commandline', 'message_admins'))
+                ->getMock();
+
+        // Test specifying file that does not exist.
+        $nonexistingfile = $this->tempfile . '_';
+        $this->assertFileNotExists($nonexistingfile);
+        // Run mock scanning, we expect SCAN_RESULT_ERROR.
+        $this->assertEquals(2, $antivirus->scan_file($nonexistingfile, ''));
+        $this->assertDebuggingCalled();
+    }
+
+    public function test_scan_file_no_virus() {
+        $methods = array(
+            'scan_file_execute_commandline',
+            'scan_file_execute_unixsocket',
+            'message_admins',
+            'get_config',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+        // Initiate mock scanning with configuration setting to use commandline.
+        $configmap = array(array('runningmethod', 'commandline'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Configure scan_file_execute_commandline and scan_file_execute_unixsocket
+        // method stubs to behave as if no virus has been found (SCAN_RESULT_OK).
+        $antivirus->method('scan_file_execute_commandline')->willReturn(0);
+        $antivirus->method('scan_file_execute_unixsocket')->willReturn(0);
+
+        // Set expectation that message_admins is NOT called.
+        $antivirus->expects($this->never())->method('message_admins');
+
+        // Run mock scanning.
+        $this->assertFileExists($this->tempfile);
+        $this->assertEquals(0, $antivirus->scan_file($this->tempfile, ''));
+
+        // Initiate mock scanning with configuration setting to use unixsocket.
+        $configmap = array(array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Run mock scanning.
+        $this->assertEquals(0, $antivirus->scan_file($this->tempfile, ''));
+    }
+
+#>
+#>>
+
+#>
+
+
+    public function test_scan_file_virus() {
+        $methods = array(
+            'scan_file_execute_commandline',
+            'scan_file_execute_unixsocket',
+            'message_admins',
+            'get_config',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+        // Initiate mock scanning with configuration setting to use commandline.
+        $configmap = array(array('runningmethod', 'commandline'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Configure scan_file_execute_commandline and scan_file_execute_unixsocket
+        // method stubs to behave as if virus has been found (SCAN_RESULT_FOUND).
+        $antivirus->method('scan_file_execute_commandline')->willReturn(1);
+        $antivirus->method('scan_file_execute_unixsocket')->willReturn(1);
+
+        // Set expectation that message_admins is NOT called.
+        $antivirus->expects($this->never())->method('message_admins');
+
+        // Run mock scanning.
+        $this->assertFileExists($this->tempfile);
+        $this->assertEquals(1, $antivirus->scan_file($this->tempfile, ''));
+
+        // Initiate mock scanning with configuration setting to use unixsocket.
+        $configmap = array(array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Run mock scanning.
+        $this->assertEquals(1, $antivirus->scan_file($this->tempfile, ''));
+    }
+
+#>
+#>>
+
+#>
+
+
+    public function test_scan_file_error_donothing() {
+        $methods = array(
+            'scan_file_execute_commandline',
+            'scan_file_execute_unixsocket',
+            'message_admins',
+            'get_config',
+            'get_scanning_notice',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+
+        // Configure scan_file_execute_commandline and scan_file_execute_unixsocket
+        // method stubs to behave as if there is a scanning error (SCAN_RESULT_ERROR).
+        $antivirus->method('scan_file_execute_commandline')->willReturn(2);
+        $antivirus->method('scan_file_execute_unixsocket')->willReturn(2);
+        $antivirus->method('get_scanning_notice')->willReturn('someerror');
+
+        // Set expectation that message_admins is called.
+        $antivirus->expects($this->atLeastOnce())->method('message_admins')->with($this->equalTo('someerror'));
+
+        // Initiate mock scanning with configuration setting to do nothing on
+        // scanning error and using commandline.
+        $configmap = array(array('clamfailureonupload', 'donothing'), array('runningmethod', 'commandline'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Run mock scanning.
+        $this->assertFileExists($this->tempfile);
+        $this->assertEquals(2, $antivirus->scan_file($this->tempfile, ''));
+
+        // Initiate mock scanning with configuration setting to do nothing on
+        // scanning error and using unixsocket.
+        $configmap = array(array('clamfailureonupload', 'donothing'), array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Run mock scanning.
+        $this->assertEquals(2, $antivirus->scan_file($this->tempfile, ''));
+    }
+
+#>
+#>>
+
+#>
+
+
+    public function test_scan_file_error_actlikevirus() {
+        $methods = array(
+            'scan_file_execute_commandline',
+            'scan_file_execute_unixsocket',
+            'message_admins',
+            'get_config',
+            'get_scanning_notice',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+
+        $antivirus->method('scan_file_execute_commandline')->willReturn(2);
+        $antivirus->method('scan_file_execute_unixsocket')->willReturn(2);
+        $antivirus->method('get_scanning_notice')->willReturn('someerror');
+
+        $antivirus->expects($this->atLeastOnce())->method('message_admins')->with($this->equalTo('someerror'));
+
+        $configmap = array(array('clamfailureonupload', 'actlikevirus'), array('runningmethod', 'commandline'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        $this->assertFileExists($this->tempfile);
+        $this->assertEquals(1, $antivirus->scan_file($this->tempfile, ''));
+
+        $configmap = array(array('clamfailureonupload', 'actlikevirus'), array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        $this->assertEquals(1, $antivirus->scan_file($this->tempfile, ''));
+    }
+
+#>
+#>>
+
+#>
+
+
+    public function test_scan_data_no_virus() {
+        $methods = array(
+            'scan_data_execute_unixsocket',
+            'message_admins',
+            'get_config',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+        $configmap = array(array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        $antivirus->method('scan_data_execute_unixsocket')->willReturn(0);
+
+        $antivirus->expects($this->never())->method('message_admins');
+
+        $this->assertEquals(0, $antivirus->scan_data(''));
+    }
+
+    public function test_scan_data_virus() {
+        $methods = array(
+            'scan_data_execute_unixsocket',
+            'message_admins',
+            'get_config',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+        // Initiate mock scanning with configuration setting to use unixsocket.
+        $configmap = array(array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Configure scan_data_execute_unixsocket method stubs to behave as if
+        // no virus has been found (SCAN_RESULT_FOUND).
+        $antivirus->method('scan_data_execute_unixsocket')->willReturn(1);
+
+        $antivirus->expects($this->never())->method('message_admins');
+
+        $this->assertEquals(1, $antivirus->scan_data(''));
+    }
+
+#>
+#>>
+
+#>
+
+
+    public function test_scan_data_error_donothing() {
+        $methods = array(
+            'scan_data_execute_unixsocket',
+            'message_admins',
+            'get_config',
+            'get_scanning_notice',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+        // Initiate mock scanning with configuration setting to do nothing on
+        // scanning error and using unixsocket.
+        $configmap = array(array('clamfailureonupload', 'donothing'), array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Configure scan_data_execute_unixsocket method stubs to behave as if
+        // there is a scanning error (SCAN_RESULT_ERROR).
+        $antivirus->method('scan_data_execute_unixsocket')->willReturn(2);
+        $antivirus->method('get_scanning_notice')->willReturn('someerror');
+
+        // Set expectation that message_admins is called.
+        $antivirus->expects($this->atLeastOnce())->method('message_admins')->with($this->equalTo('someerror'));
+
+        // Run mock scanning.
+        $this->assertEquals(2, $antivirus->scan_data(''));
+    }
+
+#>
+#>>
+
+#>
+
+
+    public function test_scan_data_error_actlikevirus() {
+        $methods = array(
+            'scan_data_execute_unixsocket',
+            'message_admins',
+            'get_config',
+            'get_scanning_notice',
+        );
+        $antivirus = $this->getMockBuilder('\antivirus_clamav\scanner')
+                ->setMethods($methods)
+                ->getMock();
+
+        // Initiate mock scanning with configuration setting to act like virus on
+        // scanning error and using unixsocket.
+        $configmap = array(array('clamfailureonupload', 'actlikevirus'), array('runningmethod', 'unixsocket'));
+        $antivirus->method('get_config')->will($this->returnValueMap($configmap));
+
+        // Configure scan_data_execute_unixsocket method stubs to behave as if
+        // there is a scanning error (SCAN_RESULT_ERROR).
+        $antivirus->method('scan_data_execute_unixsocket')->willReturn(2);
+        $antivirus->method('get_scanning_notice')->willReturn('someerror');
+
+        // Set expectation that message_admins is called.
+        $antivirus->expects($this->atLeastOnce())->method('message_admins')->with($this->equalTo('someerror'));
+
+        // Run mock scanning, we expect SCAN_RESULT_FOUND since configuration
+        // require us to act like virus.
+        $this->assertEquals(1, $antivirus->scan_data(''));
+    }
+}
+
+
